@@ -1,32 +1,27 @@
 import numpy as np
 from sklearn.datasets import fetch_openml
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import ConfusionMatrixDisplay
 import Nets
 import pygame
-import matplotlib.pyplot as plt
+import tensorflow as tf
+import os
 
-def maximize_data(X):
-    return np.where(X > 0, 255, 0)
-
-def load_weights(neural_net, filepath = "weights/model_weights.npz"):
-    data = np.load(filepath)
-    neural_net.weights_input_first = data["weights_input_first"]
-    neural_net.bias_input_first = data["bias_input_first"]
-    neural_net.weights_first_second = data["weights_first_second"]
-    neural_net.bias_first_second = data["bias_first_second"]
-    neural_net.weights_second_output = data["weights_second_output"]
-    neural_net.bias_second_output = data["bias_second_output"]
-    return neural_net
+def load_weights(neural_net, filepath="weights/model_weights.npz"):
+    loaded = np.load(filepath)
+    for i in range(len(neural_net.weights)):
+        w = loaded[f'weights_{i}']
+        b = loaded[f'biases_{i}']
+        if w.shape != neural_net.weights[i].shape or b.shape != neural_net.biases[i].shape:
+            raise ValueError(f"Shape mismatch at layer {i}: weights {w.shape} vs {neural_net.weights[i].shape}, biases {b.shape} vs {neural_net.biases[i].shape}")
+        neural_net.weights[i] = w
+        neural_net.biases[i] = b
+    print(f"Weights and biases loaded from {filepath}.")
 
 def save_weights(neural_net, filepath="weights/model_weights.npz"):
-    np.savez(filepath,
-             weights_input_first=neural_net.weights_input_first,
-             bias_input_first=neural_net.bias_input_first,
-             weights_first_second=neural_net.weights_first_second,
-             bias_first_second=neural_net.bias_first_second,
-             weights_second_output=neural_net.weights_second_output,
-             bias_second_output=neural_net.bias_second_output)
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    data = {f'weights_{i}' : neural_net.weights[i] for i in range(len(neural_net.weights))}
+    data.update({f'biases_{i}' : neural_net.biases[i] for i in range(len(neural_net.biases))})
+
+    np.savez(filepath, **data)
     print(f"Weights and biases saved to {filepath}.")
 
 
@@ -68,6 +63,7 @@ class Board:
 
         self.cnn_path = "icons/Cnn.png"
         self.dense_path = "icons/Dense.png"
+        self.menu_path = "icons/Menu.png"
 
         self.brush_sizes = [1, 2, 3]
         self.current_brush_size = 1
@@ -84,16 +80,19 @@ class Board:
         self.screen.fill((255, 255, 255))
         cnn_button = pygame.image.load(self.cnn_path)
         dense_button = pygame.image.load(self.dense_path)
-
+        menu_button = pygame.image.load(self.menu_path)
         button_size = (200, 100)
         cnn_button = pygame.transform.scale(cnn_button, button_size)
         dense_button = pygame.transform.scale(dense_button, button_size)
 
-        cnn_rect = cnn_button.get_rect(center=(self.width // 2 - 100, self.height // 2))
-        dense_rect = dense_button.get_rect(center=(self.width // 2 + 100, self.height // 2))
+        cnn_rect = cnn_button.get_rect(center=(self.width // 2 - 150, self.height // 2))
+        dense_rect = dense_button.get_rect(center=(self.width // 2 + 150, self.height // 2))
+        menu_rect = menu_button.get_rect(center=(self.width // 2, 200))
+        
 
         self.screen.blit(cnn_button, cnn_rect)
         self.screen.blit(dense_button, dense_rect)
+        self.screen.blit(menu_button, menu_rect)
 
         pygame.display.flip()
 
@@ -136,10 +135,10 @@ class Board:
         self.render_instructions()
 
     def render_output_boxes(self, neural_net, probabilities):
-        if hasattr(neural_net, 'n_output'):
-            output_size = neural_net.n_output
+        if hasattr(neural_net, 'n_layers'):
+            output_size = neural_net.n_layers
         else:
-            output_size = neural_net.output_shape[-1]
+            output_size = neural_net.layers[-1].units
 
         square_size = self.width // (output_size + 4)
         distance = (self.width - output_size * square_size) // (output_size + 1)
@@ -410,6 +409,12 @@ X_train, X_test, y_train, y_test = split_data(X, y)
 X_train_norm = normalize_data(X_train)
 X_test_norm = normalize_data(X_test)
 
+layer_size = [28*28, 256, 128, 10]
+dropout_rate = [0.3, 0.3]
+#model = Nets.Dense(layer_size, dropout_rate)
+#losses = model.train(X_train_norm, y_train, epochs = 50, learning_rate = 0.01, batch_size = 32)
+#model.evaluate(X_test_norm, y_test)
+#save_weights(model, "weights/model_weights_dropout_03_50_epochs.npz")
 pygame.init()
 running = True
 board = Board(width=900, height=700)
@@ -417,8 +422,8 @@ board = Board(width=900, height=700)
 board.select_network()
 
 if board.selected_network == 'dense':
-    neural_net = Nets.Dense(784, 10, 128, 64)
-    load_weights(neural_net)
+    neural_net = Nets.Dense(layer_size, dropout_rate)
+    load_weights(neural_net, "weights/model_weights_dropout_03_50_epochs.npz")
 elif board.selected_network == 'cnn':
     import tensorflow as tf
     neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v2.h5')
@@ -427,8 +432,8 @@ while running:
     event_result = board.handle_events()
     if event_result == "menu":
         if board.selected_network == 'dense':
-            neural_net = Nets.Dense(784, 10, 128, 64)
-            load_weights(neural_net)
+            neural_net = Nets.Dense(layer_size, dropout_rate)
+            load_weights(neural_net, "weights/model_weights_dropout_03_50_epochs.npz")
         elif board.selected_network == 'cnn':
             neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v2.h5')
     elif event_result is False:
