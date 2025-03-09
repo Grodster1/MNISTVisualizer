@@ -135,8 +135,8 @@ class Board:
         self.render_instructions()
 
     def render_output_boxes(self, neural_net, probabilities):
-        if hasattr(neural_net, 'n_layers'):
-            output_size = neural_net.n_layers
+        if hasattr(neural_net, 'layer_sizes'):
+            output_size = neural_net.layer_sizes[-1]
         else:
             output_size = neural_net.layers[-1].units
 
@@ -426,7 +426,7 @@ if board.selected_network == 'dense':
     load_weights(neural_net, "weights/model_weights_dropout_03_50_epochs.npz")
 elif board.selected_network == 'cnn':
     import tensorflow as tf
-    neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v2.h5')
+    neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v3.h5')
 
 while running:
     event_result = board.handle_events()
@@ -435,7 +435,7 @@ while running:
             neural_net = Nets.Dense(layer_size, dropout_rate)
             load_weights(neural_net, "weights/model_weights_dropout_03_50_epochs.npz")
         elif board.selected_network == 'cnn':
-            neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v2.h5')
+            neural_net = tf.keras.models.load_model('weights/mnist_model_cnn_v3.h5')
     elif event_result is False:
         running = False
 

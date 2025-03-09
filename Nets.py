@@ -5,21 +5,6 @@ from tqdm import tqdm
 
 class Dense:
     def __init__(self, layer_sizes:[], dropout_rate = None):
-        """self.n_input = n_input
-        self.n_output = n_output
-        self.first_layer_size = first_layer_size
-        self.second_layer_size = second_layer_size
-
-        self.weights_input_first = np.random.randn(self.n_input, self.first_layer_size) * np.sqrt(2 / self.n_input)
-        self.weights_first_second = np.random.randn(self.first_layer_size, self.second_layer_size) * np.sqrt(
-            2 / self.first_layer_size)
-        self.weights_second_output = np.random.randn(self.second_layer_size, self.n_output) * np.sqrt(
-            2 / self.second_layer_size)
-
-        self.bias_input_first = np.zeros((1, self.first_layer_size))
-        self.bias_first_second = np.zeros((1, self.second_layer_size))
-        self.bias_second_output = np.zeros((1, self.n_output))"""
-
         self.layer_sizes = layer_sizes
         self.dropout_rate = dropout_rate
         self.n_layers = len(layer_sizes)
